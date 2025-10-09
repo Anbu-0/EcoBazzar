@@ -16,5 +16,6 @@ public class TestController {
 //        return "Welcome to EcoBazaar - Farm to Fork Traceability System!<br>" +
 //               "Security Status: ACTIVE<br>" +
 //               "Try: http://localhost:8080/api/auth/register";
+// new change
 //    }
 }
