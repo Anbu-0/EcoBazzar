@@ -1,5 +1,7 @@
 package com.ecobazaar.ecobazaar.controller;
 
+import com.ecobazaar.ecobazaar.dto.AuthResponse;
+import com.ecobazaar.ecobazaar.dto.LoginRequest;
 import com.ecobazaar.ecobazaar.dto.RegisterRequest;
 import com.ecobazaar.ecobazaar.service.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -19,5 +21,12 @@ public class AuthController {
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
         String result = authService.register(request);
         return ResponseEntity.ok(result);
+    }
+
+    // NEW LOGIN ENDPOINT
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+        AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 }
