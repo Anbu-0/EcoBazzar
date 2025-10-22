@@ -83,4 +83,12 @@ public class ProductController {
     public Product getProductById(@PathVariable Long productId) {
         return productService.getProductById(productId); 
     }
+    
+    @GetMapping("/filter")
+    public List<Product> filterProducts(
+            @RequestParam(required = false) String cropName,
+            @RequestParam(required = false) LocalDate endDate
+    ) {
+        return productService.filterProduct(cropName, endDate);
+    }
 }
