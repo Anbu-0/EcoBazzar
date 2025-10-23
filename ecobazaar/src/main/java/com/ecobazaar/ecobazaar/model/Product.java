@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import jakarta.persistence.*;
 
+
 @Entity
 @Table(name = "products")
 public class Product {
@@ -20,8 +21,10 @@ public class Product {
     private String imagePath;
     private String qualityGrade;
     private Double confidenceScore;
+    private String qrCodePath;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+   
+	@ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "farmer_id")
     private User farmer;
 
@@ -86,4 +89,10 @@ public class Product {
     public void setFarmer(User farmer) {
         this.farmer = farmer;
     }
+    public String getQrCodePath() {
+		return qrCodePath;
+	}
+	public void setQrCodePath(String qrCodePath) {
+		this.qrCodePath = qrCodePath;
+	}
 }
