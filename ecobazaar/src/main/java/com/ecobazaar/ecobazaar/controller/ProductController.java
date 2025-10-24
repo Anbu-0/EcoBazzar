@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,7 +14,7 @@ import com.ecobazaar.ecobazaar.model.Product;
 import com.ecobazaar.ecobazaar.model.User;
 import com.ecobazaar.ecobazaar.repository.UserRepository;
 import com.ecobazaar.ecobazaar.service.ProductService;
-import com.ecobazaar.ecobazaar.service.QrService;
+
 
 @RestController
 @RequestMapping("/api/products")
@@ -21,12 +22,12 @@ public class ProductController {
 
     private final ProductService productService;
     private final UserRepository userRepository;
-    private final QrService qrService;
 
-    public ProductController(ProductService productService, UserRepository userRepository, QrService qrService) {
+
+    public ProductController(ProductService productService, UserRepository userRepository) {
         this.productService = productService;
         this.userRepository = userRepository;
-        this.qrService = qrService;
+
     }
 
   
@@ -97,7 +98,17 @@ public class ProductController {
     
     @PostMapping("/{id}/qrcode")
     public String generateProductQrCode(@PathVariable Long id) {
-    	return qrService.generateProductQr(id);
+    	return productService.generateProductQr(id);
+    }
+    
+    @GetMapping("/{id}/qrcode/download")
+    public ResponseEntity<byte[]> downloadProductQR(@PathVariable Long id){
+    	byte[] imageBytes = productService.getProductQRImage(id);
+    	
+    	return ResponseEntity.ok()
+    			.header("Content-Type", "image/png")
+    			.header("Content-Disposition", "attachment; filename=product_"+id+".png")
+    			.body(imageBytes);
     }
 
 }
