@@ -4,14 +4,17 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // ✅ use Spring’s version
 import com.ecobazaar.ecobazaar.model.Product;
 import com.ecobazaar.ecobazaar.repository.ProductRepository;
 import com.ecobazaar.ecobazaar.repository.UserRepository;
 import com.ecobazaar.ecobazaar.model.User;
-import java.time.LocalDate;
 import com.google.zxing.WriterException;
 import com.ecobazaar.ecobazaar.util.QrCodeGenerator;
 
@@ -20,10 +23,12 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final AiService aiService;
 
-    public ProductService(ProductRepository productRepository, UserRepository userRepository) {
+    public ProductService(ProductRepository productRepository, UserRepository userRepository, AiService aiService) {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.aiService = aiService;
     }
 
     @Transactional
@@ -31,6 +36,27 @@ public class ProductService {
         System.out.println("✅ [Service] Saving product: " + product.getCropName());
         Product saved = productRepository.save(product);
         System.out.println("✅ [Service] After save, ID = " + saved.getId());
+        
+        try {
+        if(saved.getImagePath()!=null) {
+        	Map<String, Object> aiResult = aiService.predictQuality(saved.getImagePath());
+        	
+        	if(aiResult!=null) {
+        		saved.setQualityGrade(String.valueOf(aiResult.get("grade")));
+        		
+        		saved.setConfidenceScore(Double.parseDouble(aiResult.get("confidence").toString()));
+        		
+        		productRepository.save(saved);
+        		
+        		System.out.println("AI Grade: "+saved.getQualityGrade()+ " Confidence Score "+saved.getConfidenceScore());
+        	}
+        }else {
+        	System.out.println("No image path is found for this product Id "+saved.getId());
+        }
+        }catch(Exception e) {
+        	System.out.println("AI Error "+e.getMessage());
+        }
+        
         return saved;
     }
 

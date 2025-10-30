@@ -3,7 +3,6 @@ package com.ecobazaar.ecobazaar.service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-
 import com.ecobazaar.ecobazaar.dto.AuthResponse;
 import com.ecobazaar.ecobazaar.dto.LoginRequest;
 import com.ecobazaar.ecobazaar.dto.RegisterRequest;
@@ -49,7 +48,8 @@ public class AuthService {
 
             String chosenRole = roleInput.startsWith("ROLE_") ? roleInput : "ROLE_" + roleInput;
 
-            Role userRole = roleRepository.findByRoleName(chosenRole)
+         // ✅ changed from findByRoleName → findByName
+            Role userRole = roleRepository.findByName(chosenRole)
                     .orElseThrow(() -> new RuntimeException("Role not found: " + chosenRole));
 
             User user = new User();
@@ -76,7 +76,7 @@ public class AuthService {
             throw new RuntimeException("Invalid password");
         }
 
-        String role = user.getRoles().iterator().next().getRoleName();
+        String role = user.getRoles().iterator().next().getName();
 
         String token = jwtUtil.generateToken(user.getEmail(), role, user.getId());
 

@@ -19,14 +19,17 @@ public class DataSeeder implements CommandLineRunner {
         String[] roles = {"ROLE_CONSUMER", "ROLE_FARMER", "ROLE_DISTRIBUTOR", "ROLE_RETAILER", "ROLE_ADMIN"};
         
         for(String roleName : roles) {
-            if(!roleRepository.existsByRoleName(roleName)) {
+        	// ✅ use the correct repository method and field name
+            if(!roleRepository.existsByName(roleName)) {
                 Role role = new Role();
-                role.setRoleName(roleName);
+                role.setName(roleName);
                 roleRepository.save(role);
                 System.out.println(roleName + " created");
             } else {
                 System.out.println(roleName + " already exists");
             }
         }
+        
+        System.out.println("✅ Role seeding completed successfully!");
     }
 }

@@ -10,10 +10,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import com.ecobazaar.ecobazaar.jwt.JwtAuthenticationFilter;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true)  // enables @PreAuthorize and @RolesAllowed
+
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -38,11 +41,30 @@ public class SecurityConfig {
             // Disable CSRF because we use JWT, not cookies
             .csrf(csrf -> csrf.disable())
 
-            // Define access rules
+         // Authorize requests by path and role
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()          // allow register/login
-                .requestMatchers("/api/products/**").hasAuthority("ROLE_FARMER") // only farmers can access
-                .anyRequest().authenticated()                         // everything else requires JWT
+
+                // 🔓 Public endpoints (no login required)
+                .requestMatchers("/api/auth/**").permitAll()        // register/login
+            
+
+                // 🧑‍🌾 Product APIs — only Farmers can create/edit
+                .requestMatchers("/api/products/**")
+                    .hasAnyRole("FARMER")
+
+                // 🔗 Supply Chain Tracking APIs
+                // Only Distributor/Retailer/Admin can update
+                .requestMatchers("/api/track/update")
+                    .hasAnyRole("DISTRIBUTOR","RETAILER","ADMIN")
+
+                // All users (even without login) can view product journeys
+                .requestMatchers("/api/track/**").permitAll()
+
+                // 🧑‍💼 Admin routes (overview, management)
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                // Anything else must be authenticated
+                .anyRequest().authenticated()
             )
 
             // No sessions; JWT is stateless

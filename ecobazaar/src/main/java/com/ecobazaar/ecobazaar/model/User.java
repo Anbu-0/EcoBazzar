@@ -3,8 +3,8 @@ package com.ecobazaar.ecobazaar.model;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+
 
 @Entity
 @Table(name = "users")
@@ -29,13 +29,21 @@ public class User {
 			joinColumns = @JoinColumn(name="user_id"),
 			inverseJoinColumns = @JoinColumn(name="role_id")
 			)
-	private Set<Role> roles;
+	private Set<Role> roles = new HashSet<>();
 	
 	@OneToMany(mappedBy = "farmer", cascade = CascadeType.ALL, orphanRemoval = true)
 	
 	private List<Product> products = new ArrayList<>();
 	
-	
+	public User() {}
+
+    public User(String name, String email, String password, Set<Role> roles) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.roles = roles;
+    }
+
 	
 
 	public long getId() {
@@ -86,7 +94,31 @@ public class User {
 		this.products = products;
 	}
 	
-	
+	/**
+     * Checks if the user has a given role name.
+     * Example: user.hasRole("ROLE_FARMER")
+     */
+    public boolean hasRole(String roleName) {
+        return roles.stream()
+                .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
+    }
+
+    /**
+     * Returns a list of all role names (e.g., [ROLE_FARMER, ROLE_ADMIN])
+     */
+    public List<String> getRoleNames() {
+        return roles.stream()
+                .map(Role::getName)
+                .toList();
+    }
+
+    @Override
+    public String toString() {
+        return "User{id=" + id +
+                ", email='" + email + '\'' +
+                ", roles=" + getRoleNames() +
+                '}';
+    }
 	
 	
 }
