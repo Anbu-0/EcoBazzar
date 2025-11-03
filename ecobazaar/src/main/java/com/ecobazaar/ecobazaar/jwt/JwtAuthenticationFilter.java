@@ -34,12 +34,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
     	
     	String path = request.getRequestURI();
+    	System.out.println("🧩 [JWT Filter] Running for path: " + path);
     	
-    	//SKip public routes completely 	
-    	if(isPublicPath(path)) {
-    		filterChain.doFilter(request, response);
-    		return;
-    	}
+    	// ✅ Only skip true public paths (login, uploads, QR download)
+        // ⚠️ DO NOT skip /api/verify — we want to parse token if available
+        if (isPublicPath(path)) {
+            System.out.println("⚪ [JWT Filter] Public path, skipping token check");
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
     	//Normal JWT validation
 
         final String authHeader = request.getHeader("Authorization");
@@ -54,7 +58,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String email = jwtUtil.extractUsername(token);
             String role = jwtUtil.extractRole(token);
 
-            System.out.println("✅ Role in JWT: " + role);
+         // Normalize role with ROLE_ prefix if missing
+            if (role != null && !role.toUpperCase().startsWith("ROLE_")) {
+                role = "ROLE_" + role.toUpperCase();
+            }
+
+            System.out.println("🟢 [JWT Filter] Token detected. User: " + email + " | Role: " + role);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 List<SimpleGrantedAuthority> authorities =
@@ -62,31 +71,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UsernamePasswordAuthenticationToken authenticationToken =
                         new UsernamePasswordAuthenticationToken(email, null, authorities);
+                
+                authenticationToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
 
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                System.out.println("✅ [JWT Filter] Authenticated user: " + email + " with role: " + role);
             }
+            
         } catch (JwtException ex) {
-            logger.warn("Invalid JWT: " + ex.getMessage());
+        	System.out.println("❌ [JWT Filter] Invalid JWT: " + ex.getMessage());
         }
 
         // ✅ THIS LINE IS MANDATORY
         filterChain.doFilter(request, response);
     }
     
- // Helper method: define which URLs are public
-
+ // ✅ FINAL: /api/verify removed from here
     private boolean isPublicPath(String path) {
-
-    return path.startsWith("/api/auth")
-
-    || path.startsWith("/api/verify")
-
-    || path.startsWith("/uploads")
-
-    || path.contains("/qrcode/download")
-
-    || (path.startsWith("/api/products") && "GET".equalsIgnoreCase(path));
-
+        return path.startsWith("/api/auth")
+                || path.startsWith("/uploads")
+                || path.contains("/qrcode/download");
     }
 
     }
