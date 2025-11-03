@@ -12,6 +12,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,6 +32,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
+    	
+    	String path = request.getRequestURI();
+    	
+    	//SKip public routes completely 	
+    	if(isPublicPath(path)) {
+    		filterChain.doFilter(request, response);
+    		return;
+    	}
+    	//Normal JWT validation
 
         final String authHeader = request.getHeader("Authorization");
 
@@ -48,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 List<SimpleGrantedAuthority> authorities =
-                        List.of(new SimpleGrantedAuthority(role.trim()));
+                        List.of(new SimpleGrantedAuthority(role.trim().toUpperCase()));
 
                 UsernamePasswordAuthenticationToken authenticationToken =
                         new UsernamePasswordAuthenticationToken(email, null, authorities);
@@ -62,4 +72,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // ✅ THIS LINE IS MANDATORY
         filterChain.doFilter(request, response);
     }
-}
+    
+ // Helper method: define which URLs are public
+
+    private boolean isPublicPath(String path) {
+
+    return path.startsWith("/api/auth")
+
+    || path.startsWith("/api/verify")
+
+    || path.startsWith("/uploads")
+
+    || path.contains("/qrcode/download")
+
+    || (path.startsWith("/api/products") && "GET".equalsIgnoreCase(path));
+
+    }
+
+    }
