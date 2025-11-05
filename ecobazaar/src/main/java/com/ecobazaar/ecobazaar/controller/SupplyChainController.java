@@ -25,15 +25,11 @@ public class SupplyChainController {
         this.userRepository = userRepository;
     }
 
-    // Create new handover log (Distributor, Retailer, Admin only)
-    @PreAuthorize("hasAnyRole('DISTRIBUTER','RETAILER','ADMIN')")
+    @PreAuthorize("hasAnyRole('DISTRIBUTOR','RETAILER')")
     @PostMapping("/update-chain")
     public ResponseEntity<?> updateChain(@RequestBody Map<String, Object> payload, Principal principal) {
-        System.out.println("🟢 [TRACK] update-chain called with payload: " + payload);
-
         try {
             Long productId = Long.valueOf(payload.get("productId").toString());
-            Long toUserId = Long.valueOf(payload.get("toUserId").toString());
             String location = payload.get("location").toString();
             String notes = payload.get("notes") != null ? payload.get("notes").toString() : "";
 
@@ -41,24 +37,45 @@ public class SupplyChainController {
             User fromUser = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found: " + email));
 
-            System.out.println("🟣 [TRACK] FromUser: " + fromUser.getId() + " → ToUser: " + toUserId);
+            SupplyChainLog log;
 
-            SupplyChainLog log = supplyChainService.addLog(
-                    productId, fromUser.getId(), toUserId, location, notes
-            );
+            // ✅ Distributor Logic
+            if (fromUser.hasRole("ROLE_DISTRIBUTOR")) {
+                if (payload.get("toUserId") == null)
+                    throw new RuntimeException("toUserId is required for distributor updates");
+                Long toUserId = Long.valueOf(payload.get("toUserId").toString());
+                log = supplyChainService.addLog(productId, fromUser.getId(), toUserId, location, notes);
+            }
+            // ✅ Retailer Logic
+            else if (fromUser.hasRole("ROLE_RETAILER")) {
+                log = supplyChainService.confirmReceipt(productId, fromUser.getId(), location, notes);
+            }
+            // 🚫 Unauthorized role
+            else {
+                throw new RuntimeException("Unauthorized role for this action");
+            }
 
-            System.out.println("✅ [TRACK] Log saved: " + log.getId());
             return ResponseEntity.ok(log);
 
         } catch (Exception e) {
-            System.out.println("❌ [TRACK] Error: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','DISTRIBUTOR','RETAILER')")
     @GetMapping("/{productId}")
     public ResponseEntity<List<SupplyChainLog>> getProductChain(@PathVariable Long productId) {
         return ResponseEntity.ok(supplyChainService.getLogsByProduct(productId));
     }
+    
+    @PreAuthorize("hasRole('RETAILER')")
+    @GetMapping("/pending")
+    public ResponseEntity<?> getPendingForRetailer(Principal principal) {
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<SupplyChainLog> pending = supplyChainService.getPendingConfirmations(user.getId());
+        return ResponseEntity.ok(pending);
+    }
+
 }

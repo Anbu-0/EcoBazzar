@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
-
 import com.ecobazaar.ecobazaar.model.SupplyChainLog;
 import com.ecobazaar.ecobazaar.repository.SupplyChainLogRepository;
 import com.ecobazaar.ecobazaar.util.HashUtil;
@@ -19,15 +18,12 @@ public class SupplyChainService {
         this.supplyChainLogRepository = supplyChainLogRepository;
     }
 
-    // Add a new supply chain log entry
+    // Distributor or any authorized sender adds new tracking log
     public SupplyChainLog addLog(Long productId, Long fromUserId, Long toUserId,
                                  String location, String notes) {
-
-        // 1️ Find last log to get previous hash
         Optional<SupplyChainLog> lastLogOpt = supplyChainLogRepository.findTopByProductIdOrderByTimestampDesc(productId);
         String prevHash = lastLogOpt.map(SupplyChainLog::getHash).orElse("");
 
-        // 2️ Create new log
         SupplyChainLog newLog = new SupplyChainLog();
         newLog.setProductId(productId);
         newLog.setFromUserId(fromUserId);
@@ -36,32 +32,59 @@ public class SupplyChainService {
         newLog.setNotes(notes);
         newLog.setTimestamp(LocalDateTime.now());
         newLog.setPrevHash(prevHash);
+        newLog.setHash(HashUtil.computeHash(newLog, prevHash));
 
-        // 3️ Compute new hash
-        String hash = HashUtil.computeHash(newLog, prevHash);
-        newLog.setHash(hash);
-
-        // 4️ Save to DB
         return supplyChainLogRepository.save(newLog);
     }
 
-    // Get all logs for a product
+    // Retailer confirms receipt ONLY if product was sent to them
+    public SupplyChainLog confirmReceipt(Long productId, Long retailerId,
+                                         String location, String notes) {
+        Optional<SupplyChainLog> lastLogOpt = supplyChainLogRepository.findTopByProductIdOrderByTimestampDesc(productId);
+
+        if (lastLogOpt.isEmpty()) {
+            throw new RuntimeException("No previous tracking record found for this product.");
+        }
+
+        SupplyChainLog lastLog = lastLogOpt.get();
+
+        // ✅ Ensure this product was sent to this retailer
+        if (!lastLog.getToUserId().equals(retailerId)) {
+            throw new RuntimeException("This product is not assigned to you. Only assigned retailer can confirm receipt.");
+        }
+
+        String prevHash = lastLog.getHash();
+
+        SupplyChainLog receiptLog = new SupplyChainLog();
+        receiptLog.setProductId(productId);
+        receiptLog.setFromUserId(lastLog.getFromUserId());
+        receiptLog.setToUserId(retailerId);
+        receiptLog.setLocation(location);
+        receiptLog.setNotes(notes.isEmpty() ? "Product received by retailer" : notes);
+        receiptLog.setTimestamp(LocalDateTime.now());
+        receiptLog.setPrevHash(prevHash);
+        receiptLog.setHash(HashUtil.computeHash(receiptLog, prevHash));
+
+        return supplyChainLogRepository.save(receiptLog);
+    }
+
     public List<SupplyChainLog> getLogsByProduct(Long productId) {
         return supplyChainLogRepository.findByProductIdOrderByTimestampAsc(productId);
     }
 
-    // Verify integrity of product chain
     public boolean verifyChain(Long productId) {
         List<SupplyChainLog> logs = getLogsByProduct(productId);
-
         String prevHash = "";
         for (SupplyChainLog log : logs) {
             String recomputed = HashUtil.computeHash(log, prevHash);
-            if (!recomputed.equals(log.getHash())) {
-                return false; // tampered
-            }
+            if (!recomputed.equals(log.getHash())) return false;
             prevHash = log.getHash();
         }
         return true;
     }
+    
+    public List<SupplyChainLog> getPendingConfirmations(Long retailerId) {
+        return supplyChainLogRepository.findPendingForRetailer(retailerId);
+    }
+
 }

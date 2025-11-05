@@ -41,7 +41,7 @@ public class VerificationController {
                 .anyMatch(auth -> {
                     String role = auth.getAuthority();
                     System.out.println("   🔍 Checking role: " + role);
-                    return role.equalsIgnoreCase("ROLE_DISTRIBUTER")
+                    return role.equalsIgnoreCase("ROLE_DISTRIBUTOR")
                             || role.equalsIgnoreCase("ROLE_RETAILER")
                             || role.equalsIgnoreCase("ROLE_ADMIN");
                 });

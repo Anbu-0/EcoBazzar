@@ -47,6 +47,9 @@ public class SecurityConfig {
             // Authorize requests by path and role
             .authorizeHttpRequests(auth -> auth
 
+            		// ✅ feedback route MUST come before /api/products/**
+                    .requestMatchers("/api/products/*/feedback").permitAll()
+                    
             		// 🌍 Public routes — open to everyone (no login required)
                     .requestMatchers(
                             "/api/auth/**",                   // login/register
@@ -58,11 +61,11 @@ public class SecurityConfig {
 
                  // 👨‍🌾 Product endpoints — FARMER + supply chain roles
                     .requestMatchers("/api/products/**")
-                        .hasAnyRole("FARMER", "DISTRIBUTER", "RETAILER", "ADMIN")
+                        .hasAnyRole("FARMER", "DISTRIBUTOR", "RETAILER", "ADMIN")
 
                     // 🚚 Tracking endpoints — only DISTRIBUTER, RETAILER, ADMIN
                     .requestMatchers("/api/track/**")
-                        .hasAnyRole("DISTRIBUTER", "RETAILER", "ADMIN")
+                        .hasAnyRole("DISTRIBUTOR", "RETAILER", "ADMIN")
 
                     // 🧑‍💼 Admin-only endpoints
                     .requestMatchers("/api/admin/**")
