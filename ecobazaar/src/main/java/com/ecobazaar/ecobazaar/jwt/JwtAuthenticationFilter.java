@@ -33,6 +33,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
     	
+    	if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+    	
     	String path = request.getRequestURI();
     	System.out.println("🧩 [JWT Filter] Running for path: " + path);
     	
@@ -48,7 +53,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
+        // ✅ Allow requests without token to continue
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("⚪ [JWT Filter] No JWT token provided");
             filterChain.doFilter(request, response);
             return;
         }

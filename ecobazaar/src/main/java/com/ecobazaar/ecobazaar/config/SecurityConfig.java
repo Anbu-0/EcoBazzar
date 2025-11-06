@@ -40,6 +40,9 @@ public class SecurityConfig {
         http
             // Disable CSRF because we use JWT, not cookies
             .csrf(csrf -> csrf.disable())
+            
+            // ✅ Allow controller exceptions to reach client instead of being converted to 403
+            .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {}))
 
          // 🔒 Stateless session (JWT-based)
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -47,19 +50,26 @@ public class SecurityConfig {
             // Authorize requests by path and role
             .authorizeHttpRequests(auth -> auth
 
+            		// ✅ MUST BE FIRST to avoid 403 on register/login
+                    .requestMatchers("/api/auth/**").permitAll()
+
+                    // ✅ Allow Spring Boot default error page (prevents AuthorizationDeniedException logs)
+                    .requestMatchers("/error").permitAll()
+                    
             		// ✅ feedback route MUST come before /api/products/**
                     .requestMatchers("/api/products/*/feedback").permitAll()
                     
             		// 🌍 Public routes — open to everyone (no login required)
                     .requestMatchers(
-                            "/api/auth/**",                   // login/register
                             "/uploads/**",                     // images, static files
                             "/api/verify/**",                  // QR scan verification (public + token-supported)
                             "/api/products/*/qrcode/download"  // QR image download
                     ).permitAll()
-            
 
-                 // 👨‍🌾 Product endpoints — FARMER + supply chain roles
+                 // ✅ Public product viewing
+                    .requestMatchers("/api/products", "/api/products/*").permitAll()
+
+                 // ✅ Product modification for roles
                     .requestMatchers("/api/products/**")
                         .hasAnyRole("FARMER", "DISTRIBUTOR", "RETAILER", "ADMIN")
 
