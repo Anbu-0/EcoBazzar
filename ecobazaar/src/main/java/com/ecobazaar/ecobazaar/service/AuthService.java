@@ -72,19 +72,23 @@ public class AuthService {
         if (!passwordEncoder.matches(login.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid password!");
         }
-
-        String role = user.getRoles()
+        // ✅ Check if user has admin role
+        boolean isAdmin = user.getRoles()
                 .stream()
-                .map(Role::getName)
-                .findFirst()
-                .orElse("ROLE_CONSUMER");
+                .anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
 
-        // ✅ If user has ROLE_ADMIN because he was approved → he can login
-        String token = jwtUtil.generateToken(login.getEmail(), role, user.getId());
+        // ✅ Primary role: ADMIN if present, else first assigned role
+        String primaryRole = isAdmin
+                ? "ROLE_ADMIN"
+                : user.getRoles()
+                    .stream()
+                    .map(Role::getName)
+                    .findFirst()
+                    .orElse("ROLE_CONSUMER");
 
-        return new AuthResponse(token, role, login.getEmail(), user.getId());
+        // ✅ Generate token
+        String token = jwtUtil.generateToken(user.getEmail(), primaryRole, user.getId());
+
+        return new AuthResponse(token, primaryRole, user.getEmail(), user.getId());
     }
-
-
-
 }

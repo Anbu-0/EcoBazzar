@@ -76,6 +76,9 @@ public class SecurityConfig {
                     // 🚚 Tracking endpoints — only DISTRIBUTER, RETAILER, ADMIN
                     .requestMatchers("/api/track/**")
                         .hasAnyRole("DISTRIBUTOR", "RETAILER", "ADMIN")
+                        
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+
 
                     // 🧑‍💼 Admin-only endpoints
                     .requestMatchers("/api/admin/**")
